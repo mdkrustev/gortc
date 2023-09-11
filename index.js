@@ -19,7 +19,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ port: 90 });
 
 // WebSocket server logic
 wss.on('connection', (ws, req) => {
@@ -44,7 +44,7 @@ wss.on('connection', (ws, req) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 80;
+const PORT = 80;
 server.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
 });
