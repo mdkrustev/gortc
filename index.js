@@ -19,7 +19,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-const wss = new WebSocket.Server({ port: 90 });
+const wss = new WebSocket.Server({ server });
 
 // WebSocket server logic
 wss.on('connection', (ws, req) => {
