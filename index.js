@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 5500 });
+const wss = new WebSocket.Server({ port: 80 });
 
 const clients = new Set(); // Store connected clients
 
@@ -24,4 +24,4 @@ wss.on('connection', (ws) => {
     });
 });
 
-console.log('WebSocket server is running on port 5500');
+console.log('WebSocket server is running on port 80');
