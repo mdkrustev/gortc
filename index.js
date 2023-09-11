@@ -42,7 +42,6 @@ wss.on('connection', (ws, req) => {
     // Store the room ID with the WebSocket connection
     ws.roomId = roomId;
 });
-
 // Start the server
 const PORT = 80;
 server.listen(PORT, () => {
