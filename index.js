@@ -1,26 +1,50 @@
+const http = require('http');
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 80 });
+const fs = require('fs');
 
-const clients = new Set(); // Store connected clients
+const server = http.createServer((req, res) => {
+    // Serve the "Hello World" page on the root URL
+    if (req.url === '/') {
+        fs.readFile('index.html', (err, data) => {
+            if (err) {
+                res.writeHead(500);
+                return res.end('Error loading index.html');
+            }
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
+        });
+    } else {
+        res.writeHead(404);
+        res.end('Not Found');
+    }
+});
 
-wss.on('connection', (ws) => {
-    console.log('Client connected');
-    clients.add(ws); // Add the new client to the set
+const wss = new WebSocket.Server({ server });
 
+// WebSocket server logic
+wss.on('connection', (ws, req) => {
+    // Extract the room ID from the URL
+    const roomId = req.url.replace('/room/', '');
+
+    // Broadcast messages to all clients in the specific room
     ws.on('message', (message) => {
-        console.log(`Received: ${message}`);
-
-        // Broadcast the message to all connected clients
-        clients.forEach((client) => {
+        wss.clients.forEach((client) => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(`Server received: ${message}`);
+                // Check if the client is in the same room
+                const clientRoomId = client.roomId || '';
+                if (clientRoomId === roomId) {
+                    client.send(message);
+                }
             }
         });
     });
 
-    ws.on('close', () => {
-        console.log('Client disconnected');
-        clients.delete(ws); // Remove the disconnected client from the set
-    });
+    // Store the room ID with the WebSocket connection
+    ws.roomId = roomId;
 });
-console.log('WebSocket server is running on port 80');
+
+// Start the server
+const PORT = process.env.PORT || 80;
+server.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+});
