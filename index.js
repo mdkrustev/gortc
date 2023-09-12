@@ -1,49 +1,81 @@
-const http = require('http');
 const WebSocket = require('ws');
+const http = require('http');
+const url = require('url');
 const fs = require('fs');
 
 const server = http.createServer((req, res) => {
-    // Serve the "Hello World" page on the root URL
-    if (req.url === '/') {
-        fs.readFile('index.html', (err, data) => {
-            if (err) {
-                res.writeHead(500);
-                return res.end('Error loading index.html');
-            }
+    fs.readFile(`${__dirname}/index.html`, (err, data) => {
+        if (err) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Internal Server Error');
+        } else {
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(data);
-        });
-    } else {
-        res.writeHead(404);
-        res.end('Not Found');
-    }
+        }
+    });
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
 
-// WebSocket server logic
+// Store connected clients and their respective rooms
+const clients = new Map();
+
 wss.on('connection', (ws, req) => {
-    // Extract the room ID from the URL
-    const roomId = req.url.replace('/room/', '');
+    const { pathname } = url.parse(req.url);
 
-    // Broadcast messages to all clients in the specific room
+    // Extract the room ID from the URL
+    const roomId = pathname.split('/').pop();
+
+    if (!roomId) {
+        ws.close(4000, 'Invalid room ID');
+        return;
+    }
+
+    // Store the WebSocket connection in the appropriate room
+    if (!clients.has(roomId)) {
+        clients.set(roomId, new Set());
+    }
+
+    clients.get(roomId).add(ws);
+
     ws.on('message', (message) => {
-        wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                // Check if the client is in the same room
-                const clientRoomId = client.roomId || '';
-                if (clientRoomId === roomId) {
-                    client.send(message);
+        // Broadcast the message to all clients in the room
+        console.log(message.toString())
+        const roomClients = clients.get(roomId);
+        if (roomClients) {
+            roomClients.forEach((client) => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(message.toString());
                 }
-            }
-        });
+            });
+        }
     });
 
-    // Store the room ID with the WebSocket connection
-    ws.roomId = roomId;
+    ws.on('close', () => {
+        // Remove the WebSocket connection from the room
+        const roomClients = clients.get(roomId);
+        if (roomClients) {
+            roomClients.delete(ws);
+            if (roomClients.size === 0) {
+                clients.delete(roomId);
+            }
+        }
+    });
 });
-// Start the server
-const PORT = 80;
-server.listen(PORT, () => {
-    console.log(`Server is listening on port ${PORT}`);
+
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
 });
+
+const port = process.env.PORT || 80;
+const host = '127.0.0.1';
+
+server.listen(port, host, () => {
+    console.log(`WebSocket server is listening on ws://${host}:${port}`);
+});
+
+
+
+
