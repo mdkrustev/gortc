@@ -69,11 +69,11 @@ server.on('upgrade', (request, socket, head) => {
     });
 });
 
-const port = process.env.PORT || 8080;
+const port = 8080;
 const host = '127.0.0.1';
 
 server.listen(port, host, () => {
-    console.log(`WebSocket server is listening on ws://${host}:${port}`);
+    console.log(`WebSocket Server is listening on ws://${host}:${port}`);
 });
 
 
